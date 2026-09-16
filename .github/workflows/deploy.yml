@@ -1,10 +1,9 @@
-name: Deploy
+name: Deploy public
 
+# Deliberately manual. The public build must ship only the sanitized summary, never the raw database,
+# so it is not wired to deploy-on-push where a wrong build could expose secrets. Dispatch it knowingly.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   deploy:
@@ -12,10 +11,9 @@ jobs:
     with:
       node_install: npm ci
       checks: |
-        npm run typecheck
-        npm run fetch-db
-        npm run build
+        npm run build:public
       command: deploy
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      envPAT: ${{ secrets.PINAXIS_READ_TOKEN }}

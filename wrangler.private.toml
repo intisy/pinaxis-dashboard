@@ -1,7 +1,7 @@
 name = "pinaxis-dashboard-private"
 compatibility_date = "2026-09-16"
-# No workers.dev URL: the private build is reachable only through an Access-gated route, never openly.
-workers_dev = false
+# Reachable at its workers.dev host, which is gated by a Cloudflare Access application on the pinaxis account.
+workers_dev = true
 
 [assets]
 directory = "./dist"

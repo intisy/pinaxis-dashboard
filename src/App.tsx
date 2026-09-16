@@ -3,6 +3,7 @@ import { loadModel } from "./data/source";
 import type { Model } from "./data/model";
 import { Overview } from "./components/Overview";
 import { ExposedSecrets } from "./components/ExposedSecrets";
+import { Exposure } from "./components/Exposure";
 import { Ecosystem } from "./components/Ecosystem";
 import { relativeTime } from "./lib/format";
 
@@ -55,6 +56,7 @@ export default function App() {
 
       <Overview totals={model.totals} categories={model.categories} />
       <ExposedSecrets types={model.credentialTypes} leaks={model.leaks} />
+      <Exposure exposure={model.exposure} fileTypes={model.fileTypes} />
       <Ecosystem categories={model.referenceCategories} references={model.references} />
     </div>
   );

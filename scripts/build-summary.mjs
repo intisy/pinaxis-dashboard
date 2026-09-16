@@ -102,6 +102,63 @@ function sum(rows, field) {
   return rows.reduce((running, row) => running + row[field], 0);
 }
 
+const BUCKETS = [
+  { bucket: "1", fits: (n) => n === 1 },
+  { bucket: "2-3", fits: (n) => n >= 2 && n <= 3 },
+  { bucket: "4-9", fits: (n) => n >= 4 && n <= 9 },
+  { bucket: "10 or more", fits: (n) => n >= 10 },
+];
+
+function exposure(db) {
+  const perRepository = all(
+    db,
+    `SELECT repository, COUNT(*) AS findings, MAX(last_seen) AS lastSeen,
+        GROUP_CONCAT(DISTINCT target) AS targets
+       FROM result_location GROUP BY repository ORDER BY findings DESC, repository`,
+  );
+  return {
+    repositories: perRepository.length,
+    findings: perRepository.reduce((running, row) => running + row.findings, 0),
+    worst: perRepository.length > 0 ? perRepository[0].findings : 0,
+    histogram: BUCKETS.map(({ bucket, fits }) => ({
+      bucket,
+      repos: perRepository.filter((row) => fits(row.findings)).length,
+    })),
+    topRepositories: PRIVATE
+      ? perRepository.slice(0, 25).map((row) => ({
+          repository: row.repository,
+          findings: row.findings,
+          targets: row.targets.split(","),
+          lastSeen: row.lastSeen,
+        }))
+      : [],
+  };
+}
+
+/**
+ * @remarks a leading-dot file has no extension to strip, and its whole name is the signal worth
+ * reporting: ".env" is the most security-relevant filename in the dataset.
+ */
+function extensionOf(path) {
+  const base = path.slice(path.lastIndexOf("/") + 1);
+  const dot = base.lastIndexOf(".");
+  if (dot < 0) {
+    return "(no extension)";
+  }
+  return dot === 0 ? base.toLowerCase() : base.slice(dot).toLowerCase();
+}
+
+function fileTypes(db) {
+  const counts = new Map();
+  for (const row of all(db, "SELECT path FROM result_location")) {
+    const extension = extensionOf(row.path);
+    counts.set(extension, (counts.get(extension) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([extension, findings]) => ({ extension, findings }))
+    .sort((left, right) => right.findings - left.findings || left.extension.localeCompare(right.extension));
+}
+
 function summarise(db) {
   const types = credentialTypes(db);
   const credentialRows = types.filter((row) => row.category === CREDENTIALS);
@@ -155,6 +212,8 @@ function summarise(db) {
     leaks: leaks(db),
     referenceCategories,
     references,
+    exposure: exposure(db),
+    fileTypes: fileTypes(db),
   };
 }
 

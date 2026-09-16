@@ -46,3 +46,28 @@ export interface Totals {
   backlog: number;
   lastUpdated: string | null;
 }
+
+export interface ExposureBucket {
+  bucket: string;
+  repos: number;
+}
+
+export interface TopRepository {
+  repository: string;
+  findings: number;
+  targets: string[];
+  lastSeen: string;
+}
+
+export interface Exposure {
+  repositories: number;
+  findings: number;
+  worst: number;
+  histogram: ExposureBucket[];
+  topRepositories: TopRepository[];
+}
+
+export interface FileType {
+  extension: string;
+  findings: number;
+}

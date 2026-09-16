@@ -41,4 +41,21 @@ assert.equal(gcp.verification, "format-only");
 const github = publicSummary.credentialTypes.find((row) => row.target === "github-token");
 assert.equal(github.verification, "validated");
 
+assert.deepEqual(publicSummary.exposure.topRepositories, [],
+  "a public summary never names a repository");
+assert.equal(publicSummary.exposure.repositories, 6);
+assert.equal(publicSummary.exposure.worst, 3, "o/alpha holds three findings");
+assert.deepEqual(publicSummary.exposure.histogram, [
+  { bucket: "1", repos: 4 },
+  { bucket: "2-3", repos: 2 },
+  { bucket: "4-9", repos: 0 },
+  { bucket: "10 or more", repos: 0 },
+]);
+assert.equal(privateSummary.exposure.topRepositories[0].repository, "o/alpha");
+assert.equal(privateSummary.exposure.topRepositories[0].findings, 3);
+
+const env = publicSummary.fileTypes.find((row) => row.extension === ".env");
+assert.equal(env.findings, 2, "secrets are grouped by the extension of the file they sat in");
+assert.equal(publicSummary.fileTypes.reduce((n, row) => n + row.findings, 0), 9);
+
 console.log("summary checks passed");

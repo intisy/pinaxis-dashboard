@@ -26,11 +26,13 @@ export function Coverage({ coverage, timeline }: { coverage: CoverageData; timel
               <Line type="monotone" dataKey="credentials" name="credentials" stroke={SERIES[1]} dot={false} />
             </LineChart>
           </ResponsiveContainer>
-        ) : (
+        ) : timeline.length === 1 ? (
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: 0 }}>
-            The current dataset covers a single day ({timeline[0]?.date ?? "no data yet"}). A trend
-            appears here once a second day of crawling lands.
+            The current dataset covers a single day ({timeline[0].date}). A trend appears here once a
+            second day of crawling lands.
           </p>
+        ) : (
+          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: 0 }}>No crawl data yet.</p>
         )}
       </div>
 
@@ -56,8 +58,9 @@ export function Coverage({ coverage, timeline }: { coverage: CoverageData; timel
         </table>
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
           {compactNumber(coverage.backlog)} queries are still queued. Sources in use:{" "}
-          {coverage.sources.join(", ")}. Discovery reads only the first page of each search, popularity
-          counts come back rounded to multiples of 1024, and this page is a snapshot taken at deploy time.
+          {coverage.sources.join(", ")}. Discovery reads only the first page of each search, large
+          popularity counts are approximations returned by the search API rather than exact totals
+          (small counts are exact), and this page is a snapshot taken at deploy time.
         </p>
       </div>
     </section>

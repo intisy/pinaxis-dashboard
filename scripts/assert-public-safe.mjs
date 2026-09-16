@@ -11,14 +11,19 @@ assert.deepEqual(summary.leaks, [], "a public summary must carry no per-secret r
 assert.deepEqual(summary.exposure.topRepositories, [], "a public summary must name no repository");
 
 /**
- * @remarks this scan reads the whole document, so an ecosystem value could in principle trip a marker
- * (an npm package named sk-something would match "sk-"). That failure is the safe direction: narrow the
- * scan to the credential-bearing fields if it happens, never drop the check or weaken a marker.
+ * @remarks `references` and `versionSpread` are excluded from the marker scan because they carry
+ * third-party registry identifiers that can legitimately contain credential-like substrings (the PyPI
+ * package "Flask-Login" matches "sk-"). Every other field, which is where a leaked credential would
+ * actually appear, stays under the scan. If a future name trips a marker again, narrow the scan
+ * further; never weaken a marker or drop the check.
  */
+const { references, versionSpread, ...credentialBearing } = summary;
+const scanned = JSON.stringify(credentialBearing);
+
 const SECRET_MARKERS = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_", "sk-", "sk_live_",
   "AIza", "BEGIN PRIVATE KEY", "BEGIN RSA PRIVATE KEY", "iam.gserviceaccount.com"];
 for (const marker of SECRET_MARKERS) {
-  assert.ok(!raw.includes(marker), `a public summary must not contain ${marker}`);
+  assert.ok(!scanned.includes(marker), `a public summary must not contain ${marker}`);
 }
 
 console.log("public summary is safe to publish");

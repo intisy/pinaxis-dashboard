@@ -181,6 +181,30 @@ function versionSpread(db) {
   return [...grouped.values()].slice(0, 8);
 }
 
+function timeline(db) {
+  return all(
+    db,
+    `SELECT substr(first_seen, 1, 10) AS date, COUNT(*) AS findings,
+        SUM(CASE WHEN category=? THEN 1 ELSE 0 END) AS credentials
+       FROM result GROUP BY date ORDER BY date`,
+    [CREDENTIALS],
+  );
+}
+
+function coverage(db) {
+  const [backlog] = all(db, "SELECT COUNT(*) AS n FROM pending");
+  return {
+    backlog: backlog.n ?? 0,
+    sources: all(db, "SELECT DISTINCT source FROM result ORDER BY source").map((row) => row.source),
+    byTarget: all(
+      db,
+      `SELECT target, COUNT(*) AS total,
+          SUM(CASE WHEN popularity IS NOT NULL THEN 1 ELSE 0 END) AS counted
+         FROM reference GROUP BY target ORDER BY total DESC`,
+    ),
+  };
+}
+
 function summarise(db) {
   const types = credentialTypes(db);
   const credentialRows = types.filter((row) => row.category === CREDENTIALS);
@@ -237,6 +261,8 @@ function summarise(db) {
     exposure: exposure(db),
     fileTypes: fileTypes(db),
     versionSpread: versionSpread(db),
+    timeline: timeline(db),
+    coverage: coverage(db),
   };
 }
 

@@ -73,4 +73,14 @@ assert.deepEqual(flask.variants, [{ variant: "==2.3.0", sightings: 2 }],
 assert.equal(publicSummary.versionSpread.find((row) => row.value === "left-pad"), undefined,
   "a dependency whose only variant is bare is not listed");
 
+assert.deepEqual(publicSummary.timeline, [
+  { date: "2026-09-14", findings: 3, credentials: 2 },
+  { date: "2026-09-15", findings: 3, credentials: 2 },
+  { date: "2026-09-16", findings: 2, credentials: 2 },
+]);
+assert.equal(publicSummary.coverage.backlog, 5);
+assert.deepEqual(publicSummary.coverage.sources, ["github"]);
+const pypi = publicSummary.coverage.byTarget.find((row) => row.target === "pypi-package");
+assert.deepEqual(pypi, { target: "pypi-package", counted: 1, total: 2 });
+
 console.log("summary checks passed");

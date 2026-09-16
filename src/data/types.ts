@@ -77,3 +77,21 @@ export interface VersionSpread {
   value: string;
   variants: { variant: string; sightings: number }[];
 }
+
+export interface TimelinePoint {
+  date: string;
+  findings: number;
+  credentials: number;
+}
+
+export interface CoverageTarget {
+  target: string;
+  counted: number;
+  total: number;
+}
+
+export interface Coverage {
+  backlog: number;
+  sources: string[];
+  byTarget: CoverageTarget[];
+}

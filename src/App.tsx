@@ -5,6 +5,7 @@ import { Overview } from "./components/Overview";
 import { ExposedSecrets } from "./components/ExposedSecrets";
 import { Exposure } from "./components/Exposure";
 import { Ecosystem } from "./components/Ecosystem";
+import { Coverage } from "./components/Coverage";
 import { relativeTime } from "./lib/format";
 
 type State =
@@ -53,6 +54,11 @@ export default function App() {
         <span className="updated">updated {relativeTime(model.totals.lastUpdated)}</span>
       </div>
       <p className="tagline">A live survey of public code: exposed secrets and what the ecosystem is built from.</p>
+      <p className="section-note">
+        Pinaxis crawls public code search for leaked credentials and for the dependencies, base images
+        and CI actions that public projects are built from. It stores what it finds, re-checks whether
+        leaked keys still work, and publishes the result as an open dataset.
+      </p>
 
       <Overview totals={model.totals} categories={model.categories} />
       <ExposedSecrets types={model.credentialTypes} leaks={model.leaks} />
@@ -62,6 +68,7 @@ export default function App() {
         references={model.references}
         versionSpread={model.versionSpread}
       />
+      <Coverage coverage={model.coverage} timeline={model.timeline} />
     </div>
   );
 }

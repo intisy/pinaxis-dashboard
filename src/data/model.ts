@@ -1,10 +1,12 @@
 import type {
   CategoryCount,
+  Coverage,
   CredentialType,
   Exposure,
   FileType,
   LeakedSecret,
   ReferenceRow,
+  TimelinePoint,
   Totals,
   VersionSpread,
 } from "./types";
@@ -21,4 +23,6 @@ export interface Model {
   exposure: Exposure;
   fileTypes: FileType[];
   versionSpread: VersionSpread[];
+  timeline: TimelinePoint[];
+  coverage: Coverage;
 }

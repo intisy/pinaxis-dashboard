@@ -159,6 +159,28 @@ function fileTypes(db) {
     .sort((left, right) => right.findings - left.findings || left.extension.localeCompare(right.extension));
 }
 
+function versionSpread(db) {
+  const rows = all(
+    db,
+    `SELECT r.target, r.value, v.variant, v.sightings FROM reference r
+       JOIN reference_variant v ON v.target = r.target AND v.value = r.value
+       WHERE v.variant <> ''
+       ORDER BY r.popularity IS NULL, r.popularity DESC, v.sightings DESC`,
+  );
+  const grouped = new Map();
+  for (const row of rows) {
+    const key = `${row.target}\u0000${row.value}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, { target: row.target, value: row.value, variants: [] });
+    }
+    const entry = grouped.get(key);
+    if (entry.variants.length < 5) {
+      entry.variants.push({ variant: row.variant, sightings: row.sightings });
+    }
+  }
+  return [...grouped.values()].slice(0, 8);
+}
+
 function summarise(db) {
   const types = credentialTypes(db);
   const credentialRows = types.filter((row) => row.category === CREDENTIALS);
@@ -214,6 +236,7 @@ function summarise(db) {
     references,
     exposure: exposure(db),
     fileTypes: fileTypes(db),
+    versionSpread: versionSpread(db),
   };
 }
 

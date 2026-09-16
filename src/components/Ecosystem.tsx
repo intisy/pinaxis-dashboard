@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { ReferenceRow } from "../data/types";
+import type { ReferenceRow, VersionSpread } from "../data/types";
 import { compactNumber } from "../lib/format";
 import { GRID, INK, SERIES } from "../lib/palette";
 import { ChartTooltip } from "./ui";
@@ -8,9 +8,11 @@ import { ChartTooltip } from "./ui";
 export function Ecosystem({
   categories,
   references,
+  versionSpread,
 }: {
   categories: string[];
   references: Record<string, ReferenceRow[]>;
+  versionSpread: VersionSpread[];
 }) {
   const [category, setCategory] = useState(categories[0] ?? "");
   const chartData = (references[category] ?? [])
@@ -61,6 +63,35 @@ export function Ecosystem({
             No counted references in this category yet.
           </p>
         )}
+      </div>
+
+      <div className="card">
+        <h3>Which versions are actually in use</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>dependency</th>
+              <th>versions seen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {versionSpread.map((row) => (
+              <tr key={`${row.target}-${row.value}`}>
+                <td className="mono">{row.value}</td>
+                <td>
+                  {row.variants.map((entry) => `${entry.variant} (${entry.sightings})`).join(", ")}
+                </td>
+              </tr>
+            ))}
+            {versionSpread.length === 0 && (
+              <tr>
+                <td colSpan={2} style={{ color: "var(--text-muted)" }}>
+                  No version data recorded yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </section>
   );

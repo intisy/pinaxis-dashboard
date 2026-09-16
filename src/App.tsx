@@ -57,7 +57,11 @@ export default function App() {
       <Overview totals={model.totals} categories={model.categories} />
       <ExposedSecrets types={model.credentialTypes} leaks={model.leaks} />
       <Exposure exposure={model.exposure} fileTypes={model.fileTypes} />
-      <Ecosystem categories={model.referenceCategories} references={model.references} />
+      <Ecosystem
+        categories={model.referenceCategories}
+        references={model.references}
+        versionSpread={model.versionSpread}
+      />
     </div>
   );
 }

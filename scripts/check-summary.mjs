@@ -58,4 +58,13 @@ const env = publicSummary.fileTypes.find((row) => row.extension === ".env");
 assert.equal(env.findings, 2, "secrets are grouped by the extension of the file they sat in");
 assert.equal(publicSummary.fileTypes.reduce((n, row) => n + row.findings, 0), 9);
 
+const react = publicSummary.versionSpread.find((row) => row.value === "react");
+assert.equal(react.target, "npm-package");
+assert.deepEqual(react.variants, [
+  { variant: "18.2.0", sightings: 5 },
+  { variant: "17.0.2", sightings: 2 },
+]);
+assert.ok(publicSummary.versionSpread.every((row) => row.variants.length > 0),
+  "a dependency with no recorded variant is not listed");
+
 console.log("summary checks passed");

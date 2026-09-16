@@ -71,3 +71,9 @@ export interface FileType {
   extension: string;
   findings: number;
 }
+
+export interface VersionSpread {
+  target: string;
+  value: string;
+  variants: { variant: string; sightings: number }[];
+}

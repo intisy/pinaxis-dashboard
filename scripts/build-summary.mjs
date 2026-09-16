@@ -13,17 +13,38 @@ const require = createRequire(import.meta.url);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CREDENTIALS = "credentials";
 const PRIVATE = process.argv[2] === "private";
+const REPO = "intisy/pinaxis";
 
 function maskSecret(value) {
   const visible = value.slice(0, Math.min(6, Math.max(0, value.length - 4)));
   return visible.length > 0 ? `${visible}…••••` : "••••";
 }
 
+/**
+ * @remarks resolving the highest dataset-v<N> release means a schema bump in pinaxis repoints the
+ * dashboard on its own, instead of needing a matching edit here.
+ */
+function datasetTag() {
+  const listed = execFileSync(
+    "gh",
+    ["release", "list", "--repo", REPO, "--limit", "100", "--json", "tagName"],
+    { encoding: "utf8" },
+  );
+  const versions = JSON.parse(listed)
+    .map((release) => /^dataset-v(\d+)$/.exec(release.tagName))
+    .filter(Boolean)
+    .map((match) => Number(match[1]));
+  return versions.length > 0 ? `dataset-v${Math.max(...versions)}` : "dataset";
+}
+
 function fetchDatabase() {
+  if (process.env.PINAXIS_DB) {
+    return { path: resolve(process.env.PINAXIS_DB), dir: null };
+  }
   const dir = mkdtempSync(join(tmpdir(), "pinaxis-"));
   execFileSync(
     "gh",
-    ["release", "download", "dataset", "--repo", "intisy/pinaxis", "--pattern", "pinaxis.db", "--dir", dir, "--clobber"],
+    ["release", "download", datasetTag(), "--repo", REPO, "--pattern", "pinaxis.db", "--dir", dir, "--clobber"],
     { stdio: "inherit" },
   );
   return { path: join(dir, "pinaxis.db"), dir };
@@ -126,5 +147,7 @@ try {
   writeFileSync(join(root, "public", "summary.json"), JSON.stringify(summary));
   console.log(`wrote ${PRIVATE ? "PRIVATE" : "public"} summary.json (${summary.leaks.length} leak rows)`);
 } finally {
-  rmSync(dir, { recursive: true, force: true });
+  if (dir) {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }

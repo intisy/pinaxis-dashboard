@@ -15,7 +15,7 @@ jobs:
         npm run typecheck
         npm run fetch-db
         npm run build
-      command: pages deploy dist --project-name=pinaxis-dashboard --branch=main
+      command: deploy
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -27,13 +27,19 @@ export default function App() {
     if (!db) {
       return null;
     }
-    return {
-      totals: totals(db),
-      categories: categoryCounts(db),
-      credentialTypes: credentialTypes(db),
-      leaks: topLeakedSecrets(db),
-      referenceCategories: referenceCategories(db),
-    };
+    // A published dataset from before the schema change lacks the new columns; treat that as a
+    // transient "rebuilding" state rather than a crash, since the crawler republishes on its next run.
+    try {
+      return {
+        totals: totals(db),
+        categories: categoryCounts(db),
+        credentialTypes: credentialTypes(db),
+        leaks: topLeakedSecrets(db),
+        referenceCategories: referenceCategories(db),
+      };
+    } catch {
+      return "rebuilding" as const;
+    }
   }, [db]);
 
   if (error) {
@@ -48,6 +54,14 @@ export default function App() {
     return (
       <div className="app">
         <div className="state">Loading the dataset{"…"}</div>
+      </div>
+    );
+  }
+
+  if (model === "rebuilding") {
+    return (
+      <div className="app">
+        <div className="state">The dataset is being rebuilt. Check back after the next crawl.</div>
       </div>
     );
   }

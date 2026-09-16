@@ -1,5 +1,4 @@
 import { type Database } from "sql.js";
-import { rows } from "./db";
 import { maskSecret } from "../lib/mask";
 import type {
   CategoryCount,
@@ -10,6 +9,20 @@ import type {
 } from "./types";
 
 const CREDENTIALS = "credentials";
+
+export function rows<T>(db: Database, sql: string, params: unknown[] = []): T[] {
+  const statement = db.prepare(sql);
+  try {
+    statement.bind(params as never[]);
+    const out: T[] = [];
+    while (statement.step()) {
+      out.push(statement.getAsObject() as T);
+    }
+    return out;
+  } finally {
+    statement.free();
+  }
+}
 
 export function totals(db: Database): Totals {
   const [counts] = rows<{
@@ -113,4 +126,12 @@ export function referenceCategories(db: Database): string[] {
     `SELECT DISTINCT COALESCE(category, 'uncategorized') AS category
        FROM reference ORDER BY category`,
   ).map((row) => row.category);
+}
+
+export function referencesByCategory(db: Database): Record<string, ReferenceRow[]> {
+  const out: Record<string, ReferenceRow[]> = {};
+  for (const category of referenceCategories(db)) {
+    out[category] = topReferences(db, category, 15);
+  }
+  return out;
 }

@@ -29,17 +29,3 @@ async function fetchDataset(): Promise<ArrayBuffer> {
   }
   return response.arrayBuffer();
 }
-
-export function rows<T>(db: Database, sql: string, params: unknown[] = []): T[] {
-  const statement = db.prepare(sql);
-  try {
-    statement.bind(params as never[]);
-    const out: T[] = [];
-    while (statement.step()) {
-      out.push(statement.getAsObject() as T);
-    }
-    return out;
-  } finally {
-    statement.free();
-  }
-}

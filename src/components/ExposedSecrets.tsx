@@ -2,6 +2,7 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import type { CredentialType, LeakedSecret } from "../data/types";
 import { compactNumber, relativeTime } from "../lib/format";
 import { GRID, INK, STATUS } from "../lib/palette";
+import { MODE } from "../data/source";
 import { ChartTooltip } from "./ui";
 
 export function ExposedSecrets({
@@ -40,6 +41,14 @@ export function ExposedSecrets({
         </ResponsiveContainer>
       </div>
 
+      {MODE === "public" ? (
+        <div className="card">
+          <h3>Widest-spread leaks</h3>
+          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: 0 }}>
+            Per-secret detail (redacted values, repositories, spread) is withheld from the public view.
+          </p>
+        </div>
+      ) : (
       <div className="card">
         <h3>Widest-spread leaks</h3>
         <table>
@@ -76,6 +85,7 @@ export function ExposedSecrets({
           </tbody>
         </table>
       </div>
+      )}
     </section>
   );
 }

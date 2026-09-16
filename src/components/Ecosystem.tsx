@@ -1,18 +1,19 @@
-import { useMemo, useState } from "react";
-import type { Database } from "sql.js";
+import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { topReferences } from "../data/queries";
+import type { ReferenceRow } from "../data/types";
 import { compactNumber } from "../lib/format";
 import { GRID, INK, SERIES } from "../lib/palette";
 import { ChartTooltip } from "./ui";
 
-export function Ecosystem({ db, categories }: { db: Database; categories: string[] }) {
+export function Ecosystem({
+  categories,
+  references,
+}: {
+  categories: string[];
+  references: Record<string, ReferenceRow[]>;
+}) {
   const [category, setCategory] = useState(categories[0] ?? "");
-  const references = useMemo(
-    () => (category ? topReferences(db, category, 15) : []),
-    [db, category],
-  );
-  const chartData = references
+  const chartData = (references[category] ?? [])
     .map((row) => ({ value: row.value, metric: row.popularity ?? row.sightings }))
     .filter((row) => row.metric > 0);
 
@@ -26,11 +27,7 @@ export function Ecosystem({ db, categories }: { db: Database; categories: string
 
       <div className="tabs">
         {categories.map((name) => (
-          <button
-            key={name}
-            aria-pressed={name === category}
-            onClick={() => setCategory(name)}
-          >
+          <button key={name} aria-pressed={name === category} onClick={() => setCategory(name)}>
             {name}
           </button>
         ))}

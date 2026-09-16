@@ -1,6 +1,7 @@
-// Produces the PUBLIC summary: safe aggregates only, no raw secret strings, no per-secret rows, and the
-// raw database never touches the shipped `public/` directory. The private build skips this and ships the
-// database itself (behind Cloudflare Access). Fetch is authenticated because the pinaxis repo is private.
+// Produces the summary the dashboard reads. NEITHER mode ever ships the raw database or a raw secret
+// string. Public omits per-secret rows entirely; private includes a leak table with MASKED values plus
+// repository/occurrence context, and is meant to sit behind Cloudflare Access. Fetch is authenticated
+// because the pinaxis repo is private.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,6 +12,12 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CREDENTIALS = "credentials";
+const PRIVATE = process.argv[2] === "private";
+
+function maskSecret(value) {
+  const visible = value.slice(0, Math.min(6, Math.max(0, value.length - 4)));
+  return visible.length > 0 ? `${visible}…••••` : "••••";
+}
 
 function fetchDatabase() {
   const dir = mkdtempSync(join(tmpdir(), "pinaxis-"));
@@ -31,6 +38,25 @@ function all(db, sql, params = []) {
   }
   statement.free();
   return out;
+}
+
+function leaks(db) {
+  if (!PRIVATE) {
+    return [];
+  }
+  return all(
+    db,
+    `SELECT target, value, valid, repository, occurrences, last_seen FROM result
+       WHERE category=? ORDER BY occurrences DESC, last_seen DESC LIMIT 25`,
+    [CREDENTIALS],
+  ).map((row) => ({
+    target: row.target,
+    value: maskSecret(row.value),
+    valid: row.valid === 1,
+    repository: row.repository,
+    occurrences: row.occurrences,
+    lastSeen: row.last_seen,
+  }));
 }
 
 function summarise(db) {
@@ -83,7 +109,7 @@ function summarise(db) {
     },
     categories,
     credentialTypes,
-    leaks: [],
+    leaks: leaks(db),
     referenceCategories,
     references,
   };
@@ -96,10 +122,9 @@ try {
   const db = new SQL.Database(readFileSync(path));
   const summary = summarise(db);
   db.close();
-  // Guarantee the raw database is never shipped by the public build.
   rmSync(join(root, "public", "pinaxis.db"), { force: true });
   writeFileSync(join(root, "public", "summary.json"), JSON.stringify(summary));
-  console.log(`wrote public/summary.json (${summary.categories.length} categories, leaks withheld)`);
+  console.log(`wrote ${PRIVATE ? "PRIVATE" : "public"} summary.json (${summary.leaks.length} leak rows)`);
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }

@@ -1,16 +1,7 @@
-import { type Database } from "sql.js";
-import {
-  categoryCounts,
-  credentialTypes,
-  referenceCategories,
-  referencesByCategory,
-  topLeakedSecrets,
-  totals,
-} from "./queries";
 import type { CategoryCount, CredentialType, LeakedSecret, ReferenceRow, Totals } from "./types";
 
-// Everything the dashboard renders, precomputed. The public build ships this shape as sanitized JSON
-// with `leaks` emptied; the private build computes it live from the raw database, leaks included.
+// Everything the dashboard renders, precomputed at build time by scripts/build-summary.mjs. A public
+// build leaves `leaks` empty; a private build fills it with masked entries.
 export interface Model {
   totals: Totals;
   categories: CategoryCount[];
@@ -18,15 +9,4 @@ export interface Model {
   leaks: LeakedSecret[];
   referenceCategories: string[];
   references: Record<string, ReferenceRow[]>;
-}
-
-export function buildModel(db: Database): Model {
-  return {
-    totals: totals(db),
-    categories: categoryCounts(db),
-    credentialTypes: credentialTypes(db),
-    leaks: topLeakedSecrets(db),
-    referenceCategories: referenceCategories(db),
-    references: referencesByCategory(db),
-  };
 }

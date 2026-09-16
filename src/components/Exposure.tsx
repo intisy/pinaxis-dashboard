@@ -10,13 +10,14 @@ export function Exposure({ exposure, fileTypes }: { exposure: ExposureData; file
     <section>
       <h2>Where the exposure sits</h2>
       <p className="section-note">
-        How findings spread across repositories, and the kinds of file they were sitting in. Repository
+        Credential exposure only: how leaked credentials spread across repositories, and the kinds of
+        file they were sitting in. Dependency coordinates and publishable keys are excluded. Repository
         names are withheld from the public view so this page cannot serve as a target list.
       </p>
 
       <div className="tiles">
         <StatTile value={compactNumber(exposure.repositories)} label="repositories affected" />
-        <StatTile value={compactNumber(exposure.findings)} label="findings in place" />
+        <StatTile value={compactNumber(exposure.findings)} label="credential findings located" />
         <StatTile value={compactNumber(exposure.worst)} label="findings in the worst repository" />
       </div>
 

@@ -5,6 +5,26 @@ import { GRID, INK, STATUS } from "../lib/palette";
 import { MODE } from "../data/source";
 import { ChartTooltip } from "./ui";
 
+const PUBLISHABLE = "public-keys";
+
+function isPublishable(row: CredentialType) {
+  return row.category === PUBLISHABLE;
+}
+
+function verificationLabel(row: CredentialType) {
+  if (isPublishable(row)) {
+    return "publishable, not a secret";
+  }
+  return row.verification === "validated" ? "probed against the provider" : "format only";
+}
+
+function liveLabel(row: CredentialType) {
+  if (isPublishable(row)) {
+    return "not applicable";
+  }
+  return row.verification === "validated" ? compactNumber(row.live) : "unknown";
+}
+
 export function ExposedSecrets({
   types,
   leaks,
@@ -37,9 +57,9 @@ export function ExposedSecrets({
             {types.map((row) => (
               <tr key={row.target}>
                 <td>{row.target}</td>
-                <td>{row.verification === "validated" ? "probed against the provider" : "format only"}</td>
+                <td>{verificationLabel(row)}</td>
                 <td>{compactNumber(row.total)}</td>
-                <td>{row.verification === "validated" ? compactNumber(row.live) : "unknown"}</td>
+                <td>{liveLabel(row)}</td>
               </tr>
             ))}
           </tbody>

@@ -20,6 +20,12 @@ const RESULTS = [
   ["maven-coordinate", "com.foo:bar:1.0", 1, "dependencies", "o/eps", "build.gradle", 1, D2],
 ];
 
+/**
+ * @remarks the last five rows reuse a (target, value) pair already in RESULTS, so they add locations
+ * without adding findings, and they carry the path shapes the extension logic must never publish: a
+ * directory component, a backslash path, a backslash path whose DIRECTORY carries the only dot, a
+ * datestamped suffix and a dotted config name.
+ */
 const LOCATIONS = [
   ["github-token", "ghp_a", "o/alpha", ".env", D1],
   ["github-token", "ghp_a", "o/alpha2", ".env", D1],
@@ -30,6 +36,11 @@ const LOCATIONS = [
   ["gcp-service-account-key", "sa@x.iam.gserviceaccount.com", "o/delta", "key.txt", D3],
   ["stripe-publishable-key", "pk_live_a", "o/beta", "index.html", D1],
   ["maven-coordinate", "com.foo:bar:1.0", "o/eps", "build.gradle", D2],
+  ["github-token", "ghp_a", "o/alpha", "src/config/app.js", D1],
+  ["openai-api-key", "sk-a", "o/alpha", "deep\\win\\path\\notes.txt", D1],
+  ["openai-api-key", "sk-a", "o/alpha", "deep\\win\\v1.2\\dist\\config", D1],
+  ["gcp-api-key", "AIza_b", "o/alpha", "backup.20251108_222836", D3],
+  ["gcp-service-account-key", "sa@x.iam.gserviceaccount.com", "o/alpha", ".env.production", D3],
 ];
 
 const REFERENCES = [
@@ -38,6 +49,7 @@ const REFERENCES = [
   ["pypi-package", "flask", "pypi.org", "dependencies", 900, 2],
   ["stack-tool", "docker", null, "tech-stack", 7864320, 0],
   ["pypi-package", "uncounted", "pypi.org", "dependencies", null, 1],
+  ["github-action", "actions/checkout", "github.com", "ci-actions", 9000, 4],
 ];
 
 const VARIANTS = [
@@ -46,6 +58,7 @@ const VARIANTS = [
   ["pypi-package", "flask", "==2.3.0", 2],
   ["pypi-package", "flask", "", 3],
   ["npm-package", "left-pad", "", 4],
+  ["github-action", "actions/checkout", "v4", 9],
 ];
 
 const initSqlJs = require("sql.js");

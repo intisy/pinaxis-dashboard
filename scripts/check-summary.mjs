@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const fixture = join(root, "scratch", "fixture.db");
+const summaryPath = join(root, "public", "summary.json");
 
 function build(mode) {
   execFileSync("node", ["scripts/build-summary.mjs", ...(mode === "private" ? ["private"] : [])], {
@@ -13,7 +14,11 @@ function build(mode) {
     env: { ...process.env, PINAXIS_DB: fixture },
     stdio: "inherit",
   });
-  return JSON.parse(readFileSync(join(root, "public", "summary.json"), "utf8"));
+  return JSON.parse(readFileSync(summaryPath, "utf8"));
+}
+
+function runGate() {
+  execFileSync("node", ["scripts/assert-public-safe.mjs"], { cwd: root, stdio: "pipe" });
 }
 
 const publicSummary = build("public");
@@ -32,8 +37,8 @@ assert.equal(totals.validatedChecked, 4, "github-token, openai-api-key and gcp-s
 assert.equal(totals.validatedLive, 1, "only a probed detector can report a live credential");
 assert.equal(totals.formatMatches, 2, "gcp-api-key is format-only");
 assert.equal(totals.publicKeys, 1, "a publishable key is not a leak");
-assert.equal(totals.repositories, 6, "distinct repositories across every location");
-assert.equal(totals.locations, 9, "one row per repository and path a value appeared in");
+assert.equal(totals.repositories, 5, "o/eps holds only a dependency coordinate, which is not exposure");
+assert.equal(totals.locations, 12, "one row per repository and path a credential appeared in");
 assert.equal(totals.backlog, 5, "the pending frontier");
 
 const gcp = publicSummary.credentialTypes.find((row) => row.target === "gcp-api-key");
@@ -43,20 +48,31 @@ assert.equal(github.verification, "validated");
 
 assert.deepEqual(publicSummary.exposure.topRepositories, [],
   "a public summary never names a repository");
-assert.equal(publicSummary.exposure.repositories, 6);
-assert.equal(publicSummary.exposure.worst, 3, "o/alpha holds three findings");
+assert.equal(publicSummary.exposure.repositories, 5);
+assert.equal(publicSummary.exposure.worst, 8, "o/alpha holds eight credential locations");
 assert.deepEqual(publicSummary.exposure.histogram, [
   { bucket: "1", repos: 4 },
-  { bucket: "2-3", repos: 2 },
-  { bucket: "4-9", repos: 0 },
+  { bucket: "2-3", repos: 0 },
+  { bucket: "4-9", repos: 1 },
   { bucket: "10 or more", repos: 0 },
 ]);
 assert.equal(privateSummary.exposure.topRepositories[0].repository, "o/alpha");
-assert.equal(privateSummary.exposure.topRepositories[0].findings, 3);
+assert.equal(privateSummary.exposure.topRepositories[0].findings, 8);
 
 const env = publicSummary.fileTypes.find((row) => row.extension === ".env");
 assert.equal(env.findings, 2, "secrets are grouped by the extension of the file they sat in");
-assert.equal(publicSummary.fileTypes.reduce((n, row) => n + row.findings, 0), 9);
+assert.equal(publicSummary.fileTypes.reduce((n, row) => n + row.findings, 0), 12);
+assert.deepEqual(publicSummary.fileTypes.find((row) => row.extension === ".js"),
+  { extension: ".js", findings: 3 }, "a path with a directory component is counted by its extension alone");
+assert.deepEqual(publicSummary.fileTypes.find((row) => row.extension === "(other)"),
+  { extension: "(other)", findings: 1 }, "a datestamped suffix is not an extension and must not be published");
+assert.deepEqual(publicSummary.fileTypes.find((row) => row.extension === "(no extension)"),
+  { extension: "(no extension)", findings: 1 },
+  "a backslash path whose only dot sits in a directory name has no extension to report");
+for (const row of publicSummary.fileTypes) {
+  assert.ok(!row.extension.includes("/") && !row.extension.includes("\\"),
+    `${row.extension} must carry no path separator`);
+}
 
 const react = publicSummary.versionSpread.find((row) => row.value === "react");
 assert.equal(react.target, "npm-package");
@@ -72,6 +88,8 @@ assert.deepEqual(flask.variants, [{ variant: "==2.3.0", sightings: 2 }],
   "a bare variant is dropped while a real version survives");
 assert.equal(publicSummary.versionSpread.find((row) => row.value === "left-pad"), undefined,
   "a dependency whose only variant is bare is not listed");
+assert.equal(publicSummary.versionSpread.find((row) => row.target === "github-action"), undefined,
+  "a CI action ref is not a dependency and is not listed under one");
 
 assert.deepEqual(publicSummary.timeline, [
   { date: "2026-09-14", findings: 3, credentials: 2 },
@@ -83,4 +101,27 @@ assert.deepEqual(publicSummary.coverage.sources, ["github"]);
 const pypi = publicSummary.coverage.byTarget.find((row) => row.target === "pypi-package");
 assert.deepEqual(pypi, { target: "pypi-package", counted: 1, total: 2 });
 
+assert.equal(publicSummary.mode, "public");
+assert.equal(privateSummary.mode, "private");
+
+const FIXTURE_REPOSITORIES = ["o/alpha", "o/alpha2", "o/beta", "o/gamma", "o/delta", "o/eps"];
+const publicDocument = JSON.stringify(build("public"));
+for (const repository of FIXTURE_REPOSITORIES) {
+  assert.ok(!publicDocument.includes(repository), `a public summary must not name ${repository}`);
+}
+
+runGate();
+
+const tampered = JSON.parse(publicDocument);
+tampered.credentialTypes[0].target = `ghp_${"a".repeat(36)}`;
+writeFileSync(summaryPath, JSON.stringify(tampered));
+let rejected = false;
+try {
+  runGate();
+} catch {
+  rejected = true;
+}
+assert.ok(rejected, "the safety gate must exit non-zero on a summary carrying a token marker");
+
+build("public");
 console.log("summary checks passed");

@@ -57,7 +57,7 @@ export default function App() {
       <p className="section-note">
         Pinaxis crawls public code search for leaked credentials and for the dependencies, base images
         and CI actions that public projects are built from. It stores what it finds, re-checks whether
-        leaked keys still work, and publishes the result as an open dataset.
+        the keys it can probe still work, and publishes the result as an open dataset.
       </p>
 
       <Overview totals={model.totals} categories={model.categories} />

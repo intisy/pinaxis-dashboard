@@ -14,6 +14,7 @@ import type {
 // Everything the dashboard renders, precomputed at build time by scripts/build-summary.mjs. A public
 // build leaves `leaks` empty; a private build fills it with masked entries.
 export interface Model {
+  mode: "private" | "public";
   totals: Totals;
   categories: CategoryCount[];
   credentialTypes: CredentialType[];

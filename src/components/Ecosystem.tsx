@@ -36,7 +36,7 @@ export function Ecosystem({
       </div>
 
       <div className="card">
-        <h3>Most common in {category || "—"}</h3>
+        <h3>Most common in {category || "-"}</h3>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={Math.max(160, chartData.length * 34)}>
             <BarChart layout="vertical" data={chartData} margin={{ left: 8, right: 32 }}>
@@ -93,7 +93,8 @@ export function Ecosystem({
           </tbody>
         </table>
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: "12px 0 0" }}>
-          Lists the 8 most popular dependencies with up to 5 versions each, most seen first.
+          Lists the 8 most popular dependencies for which versions were recorded, with up to 5 versions
+          each, most seen first.
         </p>
       </div>
     </section>

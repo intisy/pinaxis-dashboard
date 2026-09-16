@@ -13,6 +13,7 @@ const require = createRequire(import.meta.url);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CREDENTIALS = "credentials";
 const PUBLIC_KEYS = "public-keys";
+const DEPENDENCIES = "dependencies";
 const PRIVATE = process.argv[2] === "private";
 const REPO = "intisy/pinaxis";
 
@@ -109,12 +110,22 @@ const BUCKETS = [
   { bucket: "10 or more", fits: (n) => n >= 10 },
 ];
 
+/**
+ * @remarks a location only counts as exposure when the value behind it is a credential: a maven
+ * coordinate or a publishable key sits in public code by design and must not inflate a count the page
+ * labels as exposure.
+ */
+const CREDENTIAL_LOCATIONS = `FROM result_location l
+  JOIN result r ON r.target = l.target AND r.value = l.value
+  WHERE r.category = ?`;
+
 function exposure(db) {
   const perRepository = all(
     db,
-    `SELECT repository, COUNT(*) AS findings, MAX(last_seen) AS lastSeen,
-        GROUP_CONCAT(DISTINCT target) AS targets
-       FROM result_location GROUP BY repository ORDER BY findings DESC, repository`,
+    `SELECT l.repository AS repository, COUNT(*) AS findings, MAX(l.last_seen) AS lastSeen,
+        GROUP_CONCAT(DISTINCT l.target) AS targets
+       ${CREDENTIAL_LOCATIONS} GROUP BY l.repository ORDER BY findings DESC, l.repository`,
+    [CREDENTIALS],
   );
   return {
     repositories: perRepository.length,
@@ -135,22 +146,34 @@ function exposure(db) {
   };
 }
 
+const CONFIG_FILENAMES = new Set([".env", ".npmrc", ".netrc", ".pypirc", ".dockercfg", ".htpasswd",
+  ".pgpass", ".replit"]);
+const EXTENSION_SHAPE = /^\.[a-z0-9][a-z0-9.+-]{0,15}$/;
+const OTHER_EXTENSION = "(other)";
+
 /**
- * @remarks a leading-dot file has no extension to strip, and its whole name is the signal worth
- * reporting: ".env" is the most security-relevant filename in the dataset.
+ * @remarks the input is a path from a stranger's repository, so nothing may pass through unchecked: a
+ * directory name, a datestamped suffix or a name like ".aws-credentials-jdoe" would publish third-party
+ * structure. A leading-dot file has no extension to strip and its whole name is the signal worth
+ * reporting, so the allowlist admits ".env" and its peers whole; everything else must look like an
+ * ordinary short extension or it collapses to "(other)".
  */
 function extensionOf(path) {
-  const base = path.slice(path.lastIndexOf("/") + 1);
+  const base = path.split(/[\\/]/).pop().toLowerCase();
   const dot = base.lastIndexOf(".");
   if (dot < 0) {
     return "(no extension)";
   }
-  return dot === 0 ? base.toLowerCase() : base.slice(dot).toLowerCase();
+  if (dot === 0) {
+    return CONFIG_FILENAMES.has(base) ? base : OTHER_EXTENSION;
+  }
+  const extension = base.slice(dot);
+  return EXTENSION_SHAPE.test(extension) ? extension : OTHER_EXTENSION;
 }
 
 function fileTypes(db) {
   const counts = new Map();
-  for (const row of all(db, "SELECT path FROM result_location")) {
+  for (const row of all(db, `SELECT l.path ${CREDENTIAL_LOCATIONS}`, [CREDENTIALS])) {
     const extension = extensionOf(row.path);
     counts.set(extension, (counts.get(extension) ?? 0) + 1);
   }
@@ -164,8 +187,9 @@ function versionSpread(db) {
     db,
     `SELECT r.target, r.value, v.variant, v.sightings FROM reference r
        JOIN reference_variant v ON v.target = r.target AND v.value = r.value
-       WHERE v.variant <> ''
+       WHERE v.variant <> '' AND r.category = ?
        ORDER BY r.popularity IS NULL, r.popularity DESC, v.sightings DESC`,
+    [DEPENDENCIES],
   );
   const grouped = new Map();
   for (const row of rows) {
@@ -214,7 +238,8 @@ function summarise(db) {
   const [backlog] = all(db, "SELECT COUNT(*) AS n FROM pending");
   const [places] = all(
     db,
-    "SELECT COUNT(*) AS locations, COUNT(DISTINCT repository) AS repositories FROM result_location",
+    `SELECT COUNT(*) AS locations, COUNT(DISTINCT l.repository) AS repositories ${CREDENTIAL_LOCATIONS}`,
+    [CREDENTIALS],
   );
   const [updated] = all(
     db,
@@ -240,6 +265,7 @@ function summarise(db) {
     );
   }
   return {
+    mode: PRIVATE ? "private" : "public",
     totals: {
       findings: findings.n ?? 0,
       credentials: sum(credentialRows, "total"),

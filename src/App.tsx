@@ -1,71 +1,50 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Database } from "sql.js";
-import { database } from "./data/db";
-import {
-  categoryCounts,
-  credentialTypes,
-  referenceCategories,
-  topLeakedSecrets,
-  totals,
-} from "./data/queries";
+import { useEffect, useState } from "react";
+import { loadModel } from "./data/source";
+import type { Model } from "./data/model";
 import { Overview } from "./components/Overview";
 import { ExposedSecrets } from "./components/ExposedSecrets";
 import { Ecosystem } from "./components/Ecosystem";
 import { relativeTime } from "./lib/format";
 
+type State =
+  | { status: "loading" }
+  | { status: "rebuilding" }
+  | { status: "error"; message: string }
+  | { status: "ready"; model: Model };
+
 export default function App() {
-  const [db, setDb] = useState<Database | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
-    database()
-      .then(setDb)
-      .catch((cause) => setError(cause instanceof Error ? cause.message : String(cause)));
+    let cancelled = false;
+    loadModel()
+      .then((model) => !cancelled && setState({ status: "ready", model }))
+      .catch((cause) => {
+        if (cancelled) {
+          return;
+        }
+        // A dataset from before the schema change lacks the new columns; show a transient notice.
+        const message = cause instanceof Error ? cause.message : String(cause);
+        setState(/column|table|schema/i.test(message)
+          ? { status: "rebuilding" }
+          : { status: "error", message });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const model = useMemo(() => {
-    if (!db) {
-      return null;
-    }
-    // A published dataset from before the schema change lacks the new columns; treat that as a
-    // transient "rebuilding" state rather than a crash, since the crawler republishes on its next run.
-    try {
-      return {
-        totals: totals(db),
-        categories: categoryCounts(db),
-        credentialTypes: credentialTypes(db),
-        leaks: topLeakedSecrets(db),
-        referenceCategories: referenceCategories(db),
-      };
-    } catch {
-      return "rebuilding" as const;
-    }
-  }, [db]);
-
-  if (error) {
-    return (
-      <div className="app">
-        <div className="state error">Could not load the dataset. {error}</div>
-      </div>
-    );
+  if (state.status === "loading") {
+    return <Shell><div className="state">Loading the dataset{"…"}</div></Shell>;
+  }
+  if (state.status === "rebuilding") {
+    return <Shell><div className="state">The dataset is being rebuilt. Check back after the next crawl.</div></Shell>;
+  }
+  if (state.status === "error") {
+    return <Shell><div className="state error">Could not load the dataset. {state.message}</div></Shell>;
   }
 
-  if (!db || !model) {
-    return (
-      <div className="app">
-        <div className="state">Loading the dataset{"…"}</div>
-      </div>
-    );
-  }
-
-  if (model === "rebuilding") {
-    return (
-      <div className="app">
-        <div className="state">The dataset is being rebuilt. Check back after the next crawl.</div>
-      </div>
-    );
-  }
-
+  const { model } = state;
   return (
     <div className="app">
       <div className="masthead">
@@ -76,7 +55,11 @@ export default function App() {
 
       <Overview totals={model.totals} categories={model.categories} />
       <ExposedSecrets types={model.credentialTypes} leaks={model.leaks} />
-      <Ecosystem db={db} categories={model.referenceCategories} />
+      <Ecosystem categories={model.referenceCategories} references={model.references} />
     </div>
   );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return <div className="app">{children}</div>;
 }

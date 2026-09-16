@@ -44,6 +44,8 @@ const VARIANTS = [
   ["npm-package", "react", "18.2.0", 5],
   ["npm-package", "react", "17.0.2", 2],
   ["pypi-package", "flask", "==2.3.0", 2],
+  ["pypi-package", "flask", "", 3],
+  ["npm-package", "left-pad", "", 4],
 ];
 
 const initSqlJs = require("sql.js");

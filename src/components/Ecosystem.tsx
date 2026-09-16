@@ -66,7 +66,7 @@ export function Ecosystem({
       </div>
 
       <div className="card">
-        <h3>Which versions are actually in use</h3>
+        <h3>Most-used versions</h3>
         <table>
           <thead>
             <tr>
@@ -92,6 +92,9 @@ export function Ecosystem({
             )}
           </tbody>
         </table>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: "12px 0 0" }}>
+          Lists the 8 most popular dependencies with up to 5 versions each, most seen first.
+        </p>
       </div>
     </section>
   );

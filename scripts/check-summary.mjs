@@ -67,4 +67,10 @@ assert.deepEqual(react.variants, [
 assert.ok(publicSummary.versionSpread.every((row) => row.variants.length > 0),
   "a dependency with no recorded variant is not listed");
 
+const flask = publicSummary.versionSpread.find((row) => row.value === "flask");
+assert.deepEqual(flask.variants, [{ variant: "==2.3.0", sightings: 2 }],
+  "a bare variant is dropped while a real version survives");
+assert.equal(publicSummary.versionSpread.find((row) => row.value === "left-pad"), undefined,
+  "a dependency whose only variant is bare is not listed");
+
 console.log("summary checks passed");

@@ -12,8 +12,15 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CREDENTIALS = "credentials";
+const PUBLIC_KEYS = "public-keys";
 const PRIVATE = process.argv[2] === "private";
 const REPO = "intisy/pinaxis";
+
+/**
+ * @remarks a detector absent from this set is treated as format-only, so a detector added to pinaxis
+ * later understates rather than overstates until it is listed here.
+ */
+const VALIDATED = new Set(["openai-api-key", "stripe-secret-key", "github-token", "gcp-service-account-key"]);
 
 function maskSecret(value) {
   const visible = value.slice(0, Math.min(6, Math.max(0, value.length - 4)));
@@ -80,15 +87,32 @@ function leaks(db) {
   }));
 }
 
-function summarise(db) {
-  const [counts] = all(
+function credentialTypes(db) {
+  return all(
     db,
-    `SELECT COUNT(*) AS findings,
-        SUM(CASE WHEN category=? THEN 1 ELSE 0 END) AS credentials,
-        SUM(CASE WHEN category=? AND valid=1 THEN 1 ELSE 0 END) AS live FROM result`,
-    [CREDENTIALS, CREDENTIALS],
-  );
+    `SELECT target, COALESCE(category,'uncategorized') AS category, COUNT(*) AS total,
+        SUM(CASE WHEN valid=1 THEN 1 ELSE 0 END) AS live,
+        SUM(CASE WHEN valid=0 THEN 1 ELSE 0 END) AS dead
+       FROM result WHERE category IN (?,?) GROUP BY target, category ORDER BY total DESC`,
+    [CREDENTIALS, PUBLIC_KEYS],
+  ).map((row) => ({ ...row, verification: VALIDATED.has(row.target) ? "validated" : "format-only" }));
+}
+
+function sum(rows, field) {
+  return rows.reduce((running, row) => running + row[field], 0);
+}
+
+function summarise(db) {
+  const types = credentialTypes(db);
+  const credentialRows = types.filter((row) => row.category === CREDENTIALS);
+  const validated = credentialRows.filter((row) => row.verification === "validated");
+  const [findings] = all(db, "SELECT COUNT(*) AS n FROM result");
   const [refCount] = all(db, "SELECT COUNT(*) AS n FROM reference");
+  const [backlog] = all(db, "SELECT COUNT(*) AS n FROM pending");
+  const [places] = all(
+    db,
+    "SELECT COUNT(*) AS locations, COUNT(DISTINCT repository) AS repositories FROM result_location",
+  );
   const [updated] = all(
     db,
     `SELECT MAX(ts) AS ts FROM (SELECT MAX(last_seen) AS ts FROM result
@@ -98,14 +122,6 @@ function summarise(db) {
     db,
     `SELECT COALESCE(category,'uncategorized') AS category, COUNT(*) AS findings,
         COUNT(DISTINCT target) AS distinctTargets FROM result GROUP BY category ORDER BY findings DESC`,
-  );
-  const credentialTypes = all(
-    db,
-    `SELECT target, COUNT(*) AS total,
-        SUM(CASE WHEN valid=1 THEN 1 ELSE 0 END) AS live,
-        SUM(CASE WHEN valid=0 THEN 1 ELSE 0 END) AS dead
-       FROM result WHERE category=? GROUP BY target ORDER BY total DESC`,
-    [CREDENTIALS],
   );
   const referenceCategories = all(
     db,
@@ -122,14 +138,20 @@ function summarise(db) {
   }
   return {
     totals: {
-      findings: counts.findings ?? 0,
-      credentials: counts.credentials ?? 0,
-      liveCredentials: counts.live ?? 0,
+      findings: findings.n ?? 0,
+      credentials: sum(credentialRows, "total"),
+      validatedChecked: sum(validated, "total"),
+      validatedLive: sum(validated, "live"),
+      formatMatches: sum(credentialRows.filter((row) => row.verification === "format-only"), "total"),
+      publicKeys: sum(types.filter((row) => row.category === PUBLIC_KEYS), "total"),
       references: refCount.n ?? 0,
+      repositories: places.repositories ?? 0,
+      locations: places.locations ?? 0,
+      backlog: backlog.n ?? 0,
       lastUpdated: updated.ts ?? null,
     },
     categories,
-    credentialTypes,
+    credentialTypes: types,
     leaks: leaks(db),
     referenceCategories,
     references,

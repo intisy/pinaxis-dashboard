@@ -26,4 +26,19 @@ for (const leak of privateSummary.leaks) {
   assert.ok(leak.value.includes("•"), `${leak.target} value must be masked`);
 }
 
+const totals = publicSummary.totals;
+assert.equal(totals.credentials, 6, "only category 'credentials' counts as a credential");
+assert.equal(totals.validatedChecked, 4, "github-token, openai-api-key and gcp-service-account-key are probed");
+assert.equal(totals.validatedLive, 1, "only a probed detector can report a live credential");
+assert.equal(totals.formatMatches, 2, "gcp-api-key is format-only");
+assert.equal(totals.publicKeys, 1, "a publishable key is not a leak");
+assert.equal(totals.repositories, 6, "distinct repositories across every location");
+assert.equal(totals.locations, 9, "one row per repository and path a value appeared in");
+assert.equal(totals.backlog, 5, "the pending frontier");
+
+const gcp = publicSummary.credentialTypes.find((row) => row.target === "gcp-api-key");
+assert.equal(gcp.verification, "format-only");
+const github = publicSummary.credentialTypes.find((row) => row.target === "github-token");
+assert.equal(github.verification, "validated");
+
 console.log("summary checks passed");

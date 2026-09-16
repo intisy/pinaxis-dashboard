@@ -5,8 +5,6 @@ import { GRID, INK, SERIES } from "../lib/palette";
 import { ChartTooltip, StatTile } from "./ui";
 
 export function Overview({ totals, categories }: { totals: Totals; categories: CategoryCount[] }) {
-  const livePercent =
-    totals.credentials > 0 ? Math.round((totals.liveCredentials / totals.credentials) * 100) : 0;
   return (
     <section>
       <h2>Overview</h2>
@@ -15,11 +13,15 @@ export function Overview({ totals, categories }: { totals: Totals; categories: C
         <StatTile value={compactNumber(totals.findings)} label="total findings" />
         <StatTile value={compactNumber(totals.credentials)} label="exposed credentials" />
         <StatTile
-          value={`${compactNumber(totals.liveCredentials)} (${livePercent}%)`}
-          label="still live"
-          alarm={totals.liveCredentials > 0}
+          value={`${compactNumber(totals.validatedLive)} of ${compactNumber(totals.validatedChecked)}`}
+          label="confirmed live, of those probed"
+          alarm={totals.validatedLive > 0}
         />
+        <StatTile value={compactNumber(totals.formatMatches)} label="format matches, unprobed" />
+        <StatTile value={compactNumber(totals.publicKeys)} label="publishable keys, not a leak" />
+        <StatTile value={compactNumber(totals.repositories)} label="repositories affected" />
         <StatTile value={compactNumber(totals.references)} label="ecosystem references" />
+        <StatTile value={compactNumber(totals.backlog)} label="queries queued" />
       </div>
 
       <div className="card">

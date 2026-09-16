@@ -4,8 +4,12 @@ export interface CategoryCount {
   distinctTargets: number;
 }
 
+export type Verification = "validated" | "format-only";
+
 export interface CredentialType {
   target: string;
+  category: string;
+  verification: Verification;
   total: number;
   live: number;
   dead: number;
@@ -32,7 +36,13 @@ export interface ReferenceRow {
 export interface Totals {
   findings: number;
   credentials: number;
-  liveCredentials: number;
+  validatedChecked: number;
+  validatedLive: number;
+  formatMatches: number;
+  publicKeys: number;
   references: number;
+  repositories: number;
+  locations: number;
+  backlog: number;
   lastUpdated: string | null;
 }

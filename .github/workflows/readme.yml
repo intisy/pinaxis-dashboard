@@ -1,0 +1,14 @@
+name: README
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  readme:
+    uses: intisy/workflows/.github/workflows/readme.yml@main

@@ -1,6 +1,6 @@
 export function compactNumber(value: number | null | undefined): string {
   if (value == null) {
-    return "–";
+    return "-";
   }
   if (value < 1000) {
     return String(value);

@@ -5,6 +5,26 @@ import { GRID, INK, STATUS } from "../lib/palette";
 import { MODE } from "../data/source";
 import { ChartTooltip } from "./ui";
 
+const PUBLISHABLE = "public-keys";
+
+function isPublishable(row: CredentialType) {
+  return row.category === PUBLISHABLE;
+}
+
+function verificationLabel(row: CredentialType) {
+  if (isPublishable(row)) {
+    return "publishable, not a secret";
+  }
+  return row.verification === "validated" ? "probed against the provider" : "format only";
+}
+
+function liveLabel(row: CredentialType) {
+  if (isPublishable(row)) {
+    return "not applicable";
+  }
+  return row.verification === "validated" ? compactNumber(row.live) : "unknown";
+}
+
 export function ExposedSecrets({
   types,
   leaks,
@@ -12,18 +32,44 @@ export function ExposedSecrets({
   types: CredentialType[];
   leaks: LeakedSecret[];
 }) {
+  const probed = types.filter((row) => row.verification === "validated");
   return (
     <section>
       <h2>Exposed secrets</h2>
       <p className="section-note">
         Leaked credentials found in public code. A <strong>live</strong> key still authenticates and is
-        the dangerous case. Values are redacted here by design.
+        the dangerous case. Only some detectors can prove that: the rest match a key's format and stop
+        there. Values are redacted here by design.
       </p>
 
       <div className="card">
-        <h3>Credential types (live vs dead)</h3>
-        <ResponsiveContainer width="100%" height={Math.max(160, types.length * 46)}>
-          <BarChart layout="vertical" data={types} margin={{ left: 8, right: 24 }}>
+        <h3>Detectors</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>target</th>
+              <th>verification</th>
+              <th>found</th>
+              <th>live</th>
+            </tr>
+          </thead>
+          <tbody>
+            {types.map((row) => (
+              <tr key={row.target}>
+                <td>{row.target}</td>
+                <td>{verificationLabel(row)}</td>
+                <td>{compactNumber(row.total)}</td>
+                <td>{liveLabel(row)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card">
+        <h3>Probed credential types (live vs dead)</h3>
+        <ResponsiveContainer width="100%" height={Math.max(160, probed.length * 46)}>
+          <BarChart layout="vertical" data={probed} margin={{ left: 8, right: 24 }}>
             <CartesianGrid horizontal={false} stroke={GRID} />
             <XAxis type="number" stroke={INK.muted} tick={{ fill: INK.muted, fontSize: 12 }} />
             <YAxis

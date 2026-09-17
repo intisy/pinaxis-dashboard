@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { ReferenceRow } from "../data/types";
+import type { ReferenceRow, VersionSpread } from "../data/types";
 import { compactNumber } from "../lib/format";
 import { GRID, INK, SERIES } from "../lib/palette";
 import { ChartTooltip } from "./ui";
@@ -8,9 +8,11 @@ import { ChartTooltip } from "./ui";
 export function Ecosystem({
   categories,
   references,
+  versionSpread,
 }: {
   categories: string[];
   references: Record<string, ReferenceRow[]>;
+  versionSpread: VersionSpread[];
 }) {
   const [category, setCategory] = useState(categories[0] ?? "");
   const chartData = (references[category] ?? [])
@@ -34,7 +36,7 @@ export function Ecosystem({
       </div>
 
       <div className="card">
-        <h3>Most common in {category || "—"}</h3>
+        <h3>Most common in {category || "-"}</h3>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={Math.max(160, chartData.length * 34)}>
             <BarChart layout="vertical" data={chartData} margin={{ left: 8, right: 32 }}>
@@ -61,6 +63,39 @@ export function Ecosystem({
             No counted references in this category yet.
           </p>
         )}
+      </div>
+
+      <div className="card">
+        <h3>Most-used versions</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>dependency</th>
+              <th>versions seen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {versionSpread.map((row) => (
+              <tr key={`${row.target}-${row.value}`}>
+                <td className="mono">{row.value}</td>
+                <td>
+                  {row.variants.map((entry) => `${entry.variant} (${entry.sightings})`).join(", ")}
+                </td>
+              </tr>
+            ))}
+            {versionSpread.length === 0 && (
+              <tr>
+                <td colSpan={2} style={{ color: "var(--text-muted)" }}>
+                  No version data recorded yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: "12px 0 0" }}>
+          Lists the 8 most popular dependencies for which versions were recorded, with up to 5 versions
+          each, most seen first.
+        </p>
       </div>
     </section>
   );

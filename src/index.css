@@ -65,7 +65,7 @@ section > h2 {
   margin: 0 0 4px;
 }
 
-section > .section-note {
+.section-note {
   color: var(--text-muted);
   font-size: 0.85rem;
   margin: 0 0 16px;

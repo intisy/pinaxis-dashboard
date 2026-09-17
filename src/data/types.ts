@@ -4,8 +4,12 @@ export interface CategoryCount {
   distinctTargets: number;
 }
 
+export type Verification = "validated" | "format-only";
+
 export interface CredentialType {
   target: string;
+  category: string;
+  verification: Verification;
   total: number;
   live: number;
   dead: number;
@@ -32,7 +36,62 @@ export interface ReferenceRow {
 export interface Totals {
   findings: number;
   credentials: number;
-  liveCredentials: number;
+  validatedChecked: number;
+  validatedLive: number;
+  formatMatches: number;
+  publicKeys: number;
   references: number;
+  repositories: number;
+  locations: number;
+  backlog: number;
   lastUpdated: string | null;
+}
+
+export interface ExposureBucket {
+  bucket: string;
+  repos: number;
+}
+
+export interface TopRepository {
+  repository: string;
+  findings: number;
+  targets: string[];
+  lastSeen: string;
+}
+
+export interface Exposure {
+  repositories: number;
+  findings: number;
+  worst: number;
+  histogram: ExposureBucket[];
+  topRepositories: TopRepository[];
+}
+
+export interface FileType {
+  extension: string;
+  findings: number;
+}
+
+export interface VersionSpread {
+  target: string;
+  value: string;
+  variants: { variant: string; sightings: number }[];
+}
+
+export interface TimelinePoint {
+  date: string;
+  findings: number;
+  credentials: number;
+}
+
+export interface CoverageTarget {
+  target: string;
+  counted: number;
+  total: number;
+}
+
+export interface Coverage {
+  backlog: number;
+  sources: string[];
+  byTarget: CoverageTarget[];
 }

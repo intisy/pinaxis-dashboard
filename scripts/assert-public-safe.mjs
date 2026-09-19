@@ -14,8 +14,10 @@ const SECRET_MARKERS = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_", "
 /**
  * @remarks "sk-" is narrowed to the credential-bearing part of the document because three characters
  * collide with legitimate package names (the PyPI package "Flask-Login"), and PACKAGE labels are real
- * registry identifiers by design. A future collision is answered by narrowing that one marker the same
- * way, never by dropping a block from the scan.
+ * registry identifiers by design. The exclusion is scoped by node type, dropping the label only off
+ * PACKAGE nodes, so a label on any other node type is still scanned regardless of what it says. A
+ * future collision is answered by narrowing that one marker the same way, never by dropping a block
+ * from the scan.
  */
 const PACKAGE_COLLIDING_MARKER = "sk-";
 
@@ -47,11 +49,13 @@ export function assertPublicSafe(document) {
   for (const marker of SECRET_MARKERS) {
     assert.ok(!whole.includes(marker), `a public graph must not contain ${marker}`);
   }
-  const packageLabels = new Set(document.nodes
-    .filter((node) => node.type === "PACKAGE").map((node) => node.label));
-  const withoutPackageNames = JSON.stringify(document,
-    (key, value) => (key === "label" && packageLabels.has(value) ? undefined : value));
-  assert.ok(!withoutPackageNames.includes(PACKAGE_COLLIDING_MARKER),
+  const scanned = {
+    ...document,
+    nodes: document.nodes.map((node) => (node.type === "PACKAGE"
+      ? { ...node, label: undefined }
+      : node)),
+  };
+  assert.ok(!JSON.stringify(scanned).includes(PACKAGE_COLLIDING_MARKER),
     `a public graph must not contain ${PACKAGE_COLLIDING_MARKER} outside registry identifiers`);
 }
 

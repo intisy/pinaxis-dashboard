@@ -101,6 +101,20 @@ test("an empty context is omitted rather than emitted blank", () => {
   assert.ok(!("context" in ownedBy));
 });
 
+test("a public OWNED_BY edge carries no context, even when the row has a non-empty one", () => {
+  const ownedByEdges = build("public").edges.filter((edge) => edge.type === "OWNED_BY");
+  assert.ok(ownedByEdges.length > 0, "no OWNED_BY edges survived to check");
+  for (const edge of ownedByEdges) {
+    assert.ok(!("context" in edge), "public OWNED_BY edge exposed a raw context");
+  }
+});
+
+test("a private OWNED_BY edge keeps its non-empty context", () => {
+  const ownedByEdges = build("private").edges.filter((edge) => edge.type === "OWNED_BY");
+  assert.ok(ownedByEdges.some((edge) => edge.context === "github:acme/api"),
+    "private OWNED_BY lost its context");
+});
+
 test("edge endpoints index into the emitted node array", () => {
   for (const mode of ["public", "private"]) {
     const graph = build(mode);
@@ -160,4 +174,38 @@ test("co-occurrence pairs secret types sharing a repository, and names none", ()
 
 test("stats are identical in both modes, being aggregates", () => {
   assert.deepEqual(build("public").stats, build("private").stats);
+});
+
+function withUnhandledNodeType(mode) {
+  const db = new SQL.Database();
+  db.run(`
+    CREATE TABLE node (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL, target TEXT NOT NULL DEFAULT '', key TEXT NOT NULL,
+      label TEXT, category TEXT, valid INTEGER, platform TEXT, props TEXT,
+      popularity INTEGER, severity REAL NOT NULL DEFAULT 0, severity_band TEXT NOT NULL DEFAULT 'LOW',
+      first_seen TEXT NOT NULL, last_seen TEXT NOT NULL);
+    CREATE TABLE edge (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      src INTEGER NOT NULL, dst INTEGER NOT NULL, type TEXT NOT NULL,
+      context TEXT NOT NULL DEFAULT '', weight INTEGER NOT NULL DEFAULT 1,
+      severity REAL NOT NULL DEFAULT 0, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL);
+    INSERT INTO node (type, target, key, label, severity, severity_band, first_seen, last_seen)
+      VALUES ('CONTRIBUTOR', '', 'github:ghost', 'ghost', 10, 'LOW',
+        '2026-09-14T10:00:00Z', '2026-09-14T10:00:00Z');
+  `);
+  try {
+    return buildGraph(db, { mode, pseudonym, schemaVersion: 99 });
+  } finally {
+    db.close();
+  }
+}
+
+test("a public build throws on a node type it does not handle", () => {
+  assert.throws(() => withUnhandledNodeType("public"), /unhandled node type/);
+});
+
+test("a private build still emits a node type it does not handle", () => {
+  const graph = withUnhandledNodeType("private");
+  assert.deepEqual(find(graph, "CONTRIBUTOR").map((n) => n.label), ["ghost"]);
 });

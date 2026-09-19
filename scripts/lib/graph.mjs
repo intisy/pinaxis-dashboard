@@ -51,6 +51,9 @@ function emitNode(row, { isPublic, pseudonym, maintainerCounts }) {
   if (row.type === "PACKAGE") {
     return { ...base, target: row.target, label: row.label, popularity: row.popularity };
   }
+  if (isPublic) {
+    throw new Error(`unhandled node type in a public build: ${row.type}`);
+  }
   return { ...base, label: row.label };
 }
 
@@ -116,6 +119,9 @@ export function buildGraph(db, { mode, pseudonym, schemaVersion }) {
       const edge = { s: indexById.get(row.src), t: indexById.get(row.dst), type: row.type,
         weight: row.weight, severity: row.severity };
       if (row.context === "") {
+        return edge;
+      }
+      if (isPublic && !PATH_BEARING_EDGES.has(row.type)) {
         return edge;
       }
       const context = isPublic && PATH_BEARING_EDGES.has(row.type)

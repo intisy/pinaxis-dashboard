@@ -35,6 +35,7 @@ const EDGES = [
   [3, 5, "LEAKED_IN", "deep\\win\\v1.2\\dist\\config", 1, 40],
   [4, 6, "OWNED_BY", "", 1, 90],
   [5, 6, "OWNED_BY", "", 1, 40],
+  [4, 6, "OWNED_BY", "github:acme/api", 1, 90],
   [7, 5, "USED_IN", "package.json", 1, 0],
   [8, 4, "MAINTAINS", "", 120, 90],
   [9, 4, "MAINTAINS", "", 30, 90],
@@ -91,4 +92,4 @@ for (let index = 0; index < 5; index += 1) {
 mkdirSync(join(root, "scratch"), { recursive: true });
 writeFileSync(join(root, "scratch", "fixture.db"), Buffer.from(db.export()));
 db.close();
-console.log("wrote scratch/fixture.db (schema v4, 9 nodes, 9 edges)");
+console.log("wrote scratch/fixture.db (schema v4, 9 nodes, 10 edges)");

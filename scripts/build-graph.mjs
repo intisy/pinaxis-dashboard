@@ -56,6 +56,7 @@ try {
   db.close();
   const document = { ...graph, dataset: tag, generatedAt: new Date().toISOString() };
   rmSync(join(root, "public", "pinaxis.db"), { force: true });
+  rmSync(join(root, "public", "summary.json"), { force: true });
   writeFileSync(join(root, "public", "graph.json"), JSON.stringify(document));
   console.log(`wrote ${MODE} graph.json (${graph.nodes.length} nodes, ${graph.edges.length} edges)`);
 } finally {

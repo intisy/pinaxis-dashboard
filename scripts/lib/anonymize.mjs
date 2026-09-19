@@ -16,8 +16,10 @@ export function loadSalt({ env = process.env, root }) {
   let fromFile = "";
   try {
     fromFile = readFileSync(join(root, SALT_FILE), "utf8").trim();
-  } catch {
-    fromFile = "";
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      throw error;
+    }
   }
   if (fromFile !== "") {
     return fromFile;

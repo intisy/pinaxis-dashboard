@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadSalt, createPseudonymizer } from "../scripts/lib/anonymize.mjs";
@@ -44,6 +44,19 @@ test("treats a blank environment value as absent", () => {
   const root = tempRoot();
   try {
     assert.throws(() => loadSalt({ env: { PINAXIS_ANON_SALT: "   " }, root }), /PINAXIS_ANON_SALT/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("propagates a non-ENOENT read error instead of reporting the salt as absent", () => {
+  const root = mkdtempSync(join(tmpdir(), "anon-"));
+  try {
+    mkdirSync(join(root, ".anon-salt"));
+    assert.throws(
+      () => loadSalt({ env: {}, root }),
+      (error) => error.code !== undefined && !/no anonymization salt/.test(error.message)
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

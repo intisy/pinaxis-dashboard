@@ -111,6 +111,19 @@ test("edge endpoints index into the emitted node array", () => {
   }
 });
 
+test("an edge resolves to the specific nodes it connects, not merely to some node", () => {
+  const graph = build("private");
+  const leaked = graph.edges
+    .filter((edge) => edge.type === "LEAKED_IN")
+    .map((edge) => [graph.nodes[edge.s].target, graph.nodes[edge.t].label])
+    .sort();
+  assert.deepEqual(leaked, [
+    ["gcp-api-key", "acme/web"],
+    ["github-token", "acme/api"],
+    ["openai-api-key", "acme/api"],
+  ]);
+});
+
 test("a repository carries its maintainer count in both modes", () => {
   for (const mode of ["public", "private"]) {
     const graph = build(mode);
